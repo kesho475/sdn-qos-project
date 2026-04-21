@@ -7,18 +7,18 @@ from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
 
 class SimpleQoSController(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_3.ofproto_v1_3_version]
+    # THE FIX IS ON THIS LINE BELOW:
+    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     def __init__(self, *args, **kwargs):
         super(SimpleQoSController, self).__init__(*args, **kwargs)
-        self.mac_to_port = {} # This is the switch's memory
+        self.mac_to_port = {}
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-        # Tell the switch: "If you don't know a packet, send it to me (the controller)"
         match = parser.OFPMatch()
         actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER)]
         self.add_flow(datapath, 0, match, actions)
@@ -45,10 +45,8 @@ class SimpleQoSController(app_manager.RyuApp):
         dpid = datapath.id
         self.mac_to_port.setdefault(dpid, {})
 
-        # Learn the MAC address
         self.mac_to_port[dpid][src] = in_port
 
-        # Forward the packet
         if dst in self.mac_to_port[dpid]:
             out_port = self.mac_to_port[dpid][dst]
         else:
